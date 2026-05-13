@@ -18,7 +18,7 @@
 #
 
 # Stage 1: Build the Angular application
-FROM node:22-alpine AS builder
+FROM node:26-alpine AS builder
 
 WORKDIR /app
 
@@ -32,7 +32,7 @@ RUN npm run lib-build -- --configuration production && npm run build -- --config
 
 
 # Stage 2: Serve the app with Nginx
-FROM nginxinc/nginx-unprivileged:1.27.4-alpine3.21-slim
+FROM nginxinc/nginx-unprivileged:1.28.0-alpine3.21-slim
 
 COPY --from=builder /app/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=builder /app/dist/data-dashboard/browser /app
