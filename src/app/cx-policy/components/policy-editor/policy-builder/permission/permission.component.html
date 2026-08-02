@@ -18,27 +18,15 @@ SPDX-License-Identifier: Apache-2.0
 -->
 
 <div class="flex flex-col bg-base-100 rounded-2xl p-4 h-full">
-  <div class="w-full flex">
-    <label class="input flex-1">
+  <div class="w-full flex flex-wrap items-center gap-3">
+    <label class="input flex-1 min-w-0">
       <span class="label">Name</span>
       <input type="text" placeholder="Permission name" [(ngModel)]="permission.name" />
     </label>
-    <div class="dropdown dropdown-end ml-4">
-      <button tabindex="0" class="btn btn-soft btn-primary" title="Add constraint">
-        <span class="material-symbols-rounded">add</span>
-        Add Constraint
-      </button>
-      <ul
-        tabindex="0"
-        class="dropdown-content menu shadow-2xl bg-base-300 rounded-2xl flex-nowrap overflow-y-auto max-h-[50vh]"
-      >
-        @for (constraint of constraints; track constraint) {
-          <li (click)="addConstraint(constraint.clone())">
-            <a class="truncate">{{ camelCaseToWords(constraint.leftOperand) }}</a>
-          </li>
-        }
-      </ul>
-    </div>
+    <button type="button" class="btn btn-soft btn-primary" title="Add constraint" (click)="openConstraintDrawer()">
+      <span class="material-symbols-rounded">add</span>
+      Add Constraint
+    </button>
   </div>
 
   <div class="divider m-0 my-4"><span class="opacity-80">Constraints</span></div>
@@ -46,55 +34,59 @@ SPDX-License-Identifier: Apache-2.0
   <div class="flex flex-col gap-3 mx-4 [&>div]:last:border-none">
     @for (constraint of permission.constraints; track constraint) {
       <div class="w-full flex flex-wrap items-center gap-4 border-b-2 border-b-base-content/10 pb-3">
-        <div class="flex flex-col flex-1">
+        <div class="flex flex-col flex-1 min-w-0">
           <div class="text-xs font-normal opacity-60">Atomic Constraint</div>
-          <!--          <div class="text-xs font-normal opacity-60">-->
-          <!--            {{ constraint.constructor.name.slice(1).replace('Con', ' Con') }}-->
-          <!--          </div>-->
           <div class="text-md font-normal">{{ constraint.toString().replace('Constraint ', '') }}</div>
         </div>
         @if (getConstraintType(constraint) === 'atomic') {
-          <button class="btn btn-sm btn-square btn-soft btn-secondary" (click)="editConstraint(constraint)">
+          <button
+            type="button"
+            class="btn btn-sm btn-square btn-soft btn-secondary"
+            title="Edit constraint"
+            (click)="editConstraint(constraint)"
+          >
             <span class="material-symbols-rounded !text-[1.2rem]">edit</span>
           </button>
         } @else {
-          <div class="dropdown dropdown-end ml-4">
-            <button tabindex="0" class="btn btn-soft btn-square btn-sm btn-primary" title="Add constraint">
-              <span class="material-symbols-rounded">add</span>
-            </button>
-            <ul
-              tabindex="0"
-              class="dropdown-content menu shadow-2xl bg-base-300 rounded-2xl flex-nowrap overflow-y-auto"
-            >
-              @for (atomic of constraints; track atomic) {
-                <li (click)="addConstraint(atomic.clone(), constraint)">
-                  <a class="truncate">{{ atomic.leftOperand }}</a>
-                </li>
-              }
-            </ul>
-          </div>
+          <button
+            type="button"
+            class="btn btn-soft btn-square btn-sm btn-primary"
+            title="Add nested constraint"
+            (click)="openConstraintDrawer(constraint)"
+          >
+            <span class="material-symbols-rounded">add</span>
+          </button>
         }
-        <button class="btn btn-sm btn-square btn-soft btn-error" (click)="deleteConstraint(constraint)">
+        <button
+          type="button"
+          class="btn btn-sm btn-square btn-soft btn-error"
+          title="Delete constraint"
+          (click)="deleteConstraint(constraint)"
+        >
           <span class="material-symbols-rounded !text-[1.2rem]">delete</span>
         </button>
         @if (getConstraintType(constraint) === 'logical') {
           <div class="w-full border-l-base-content/10 border-l-1 ml-2 -mt-3">
             @for (subconstraint of getSubConstraints(constraint); track subconstraint) {
               <div class="w-full px-4 flex gap-4 items-center my-2">
-                <div class="flex flex-col flex-1">
+                <div class="flex flex-col flex-1 min-w-0">
                   <div class="text-xs font-normal opacity-60">
                     {{ subconstraint.constructor.name.slice(1).replace('Con', ' Con') }}
                   </div>
                   <div class="text-md font-normal">{{ subconstraint.toString().replace('Constraint ', '') }}</div>
                 </div>
                 <button
+                  type="button"
                   class="btn btn-sm btn-square btn-soft btn-secondary"
+                  title="Edit constraint"
                   (click)="editConstraint(subconstraint, false, constraint)"
                 >
                   <span class="material-symbols-rounded !text-[1.2rem]">edit</span>
                 </button>
                 <button
+                  type="button"
                   class="btn btn-sm btn-square btn-soft btn-error"
+                  title="Delete constraint"
                   (click)="deleteConstraint(subconstraint, constraint)"
                 >
                   <span class="material-symbols-rounded !text-[1.2rem]">delete</span>
@@ -104,6 +96,64 @@ SPDX-License-Identifier: Apache-2.0
           </div>
         }
       </div>
+    } @empty {
+      <p class="text-sm opacity-60 text-center py-6">No constraints yet. Open the catalog to search and add one.</p>
     }
   </div>
 </div>
+
+@if (constraintDrawerOpen) {
+  <div class="fixed inset-0 z-40 flex justify-end">
+    <button
+      type="button"
+      class="absolute inset-0 bg-base-content/30"
+      aria-label="Close constraint catalog"
+      (click)="closeConstraintDrawer()"
+    ></button>
+    <aside
+      class="relative z-10 flex h-full w-full max-w-md flex-col bg-base-100 shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Constraint catalog"
+    >
+      <div class="flex items-start justify-between gap-3 border-b border-base-content/10 px-4 py-3">
+        <div>
+          <p class="font-semibold">Add constraint</p>
+          <p class="text-sm opacity-60">Search the catalog, then configure the selected constraint.</p>
+        </div>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm btn-square"
+          aria-label="Close"
+          (click)="closeConstraintDrawer()"
+        >
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+      <div class="border-b border-base-content/10 px-4 py-3">
+        <label class="input input-sm w-full">
+          <span class="material-symbols-rounded !text-base opacity-50" aria-hidden="true">search</span>
+          <input
+            type="search"
+            placeholder="Search constraints…"
+            [(ngModel)]="constraintSearch"
+            aria-label="Search constraints"
+          />
+        </label>
+      </div>
+      <ul class="menu min-h-0 flex-1 flex-nowrap overflow-y-auto px-2 py-2">
+        @for (constraint of filteredConstraints; track constraint) {
+          <li>
+            <button type="button" class="rounded-lg" (click)="pickConstraint(constraint)">
+              <span class="truncate">{{ camelCaseToWords(constraint.leftOperand) }}</span>
+            </button>
+          </li>
+        } @empty {
+          <li class="disabled px-3 py-8 text-center">
+            <span class="opacity-60">No constraints match your search.</span>
+          </li>
+        }
+      </ul>
+    </aside>
+  </div>
+}
