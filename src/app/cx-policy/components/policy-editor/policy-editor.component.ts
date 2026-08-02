@@ -1,7 +1,7 @@
 /*
  * Copyright (c) 2023 Bayerische Motoren Werke Aktiengesellschaft (BMW AG)
  * Copyright (c) 2023 Contributors to the Eclipse Foundation
- * Copyright (c) 2025 Fraunhofer-Gesellschaft zur Förderung der angewandten Forschung e.V.
+ * Copyright (c) 2025 Fraunhofer-Gesellschaft zur F├╢rderung der angewandten Forschung e.V.
  *
  * See the NOTICE file(s) distributed with this work for additional
  * information regarding copyright ownership.
@@ -19,7 +19,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Component, OnDestroy, OnInit } from '@angular/core';
+import { Component, OnDestroy, OnInit, inject } from '@angular/core';
 import { PolicyBuilderComponent } from './policy-builder/policy-builder.component';
 import {
   Action,
@@ -37,10 +37,13 @@ import { AsyncPipe, NgFor } from '@angular/common';
 import { FormatService } from '../../services/format.service';
 import { PolicyService } from '../../services/policy.service';
 import { PolicyTemplates } from '../../services/atomic-constraints';
+import { TemplateCatalogEntry, TemplateCatalogService } from '../../services/template-catalog.service';
 import { DashboardStateService, EdcClientService } from '@eclipse-edc/dashboard-core';
 import { filter, finalize, firstValueFrom, Subject, take, takeUntil } from 'rxjs';
 import { HttpClient } from '@angular/common/http';
 import { JsonObject } from '@angular-devkit/core';
+
+type PendingChange = { kind: 'type'; type: Action } | { kind: 'template'; entry: TemplateCatalogEntry };
 
 @Component({
   selector: 'app-policy-editor',
@@ -51,6 +54,13 @@ import { JsonObject } from '@angular-devkit/core';
 export class PolicyEditorComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
+  readonly formatService = inject(FormatService);
+  readonly policyService = inject(PolicyService);
+  readonly edcClientService = inject(EdcClientService);
+  private readonly stateService = inject(DashboardStateService);
+  private readonly templateCatalog = inject(TemplateCatalogService);
+  private readonly http = inject(HttpClient);
+
   text!: string;
 
   outputFormats: string[];
@@ -58,6 +68,7 @@ export class PolicyEditorComponent implements OnInit, OnDestroy {
   selectedPolicyType: Action = Action.Use;
   template: PolicyConfiguration;
   templateWarning = false;
+  pendingChange?: PendingChange;
 
   currentFormat: OutputKind;
 
@@ -69,19 +80,18 @@ export class PolicyEditorComponent implements OnInit, OnDestroy {
   validationEndpointUrl = '';
   validationErrorText?: string;
 
-  constructor(
-    public formatService: FormatService,
-    public policyService: PolicyService,
-    public readonly edcClientService: EdcClientService,
-    private readonly stateService: DashboardStateService,
-    private http: HttpClient,
-  ) {
+  templateDrawerOpen = false;
+  templateSearch = '';
+  templateEntries: TemplateCatalogEntry[] = [];
+
+  constructor() {
     this.currentFormat = OutputKind.Plain;
     this.template = PolicyTemplates.UsageTemplate();
     this.updateLegalTextKinds(Action.Use);
-    this.outputFormats = policyService.supportedOutput();
+    this.refreshTemplateCatalog();
+    this.outputFormats = this.policyService.supportedOutput();
 
-    stateService.currentEdcConfig$
+    this.stateService.currentEdcConfig$
       .pipe(
         takeUntil(this.destroy$),
         filter(x => x !== undefined),
@@ -90,7 +100,7 @@ export class PolicyEditorComponent implements OnInit, OnDestroy {
         this.validationEndpointUrl = config.managementUrl.concat('/v3/validation/policydefinition');
       });
 
-    edcClientService.isHealthy$
+    this.edcClientService.isHealthy$
       .pipe(
         filter(x => x),
         take(1),
@@ -100,6 +110,31 @@ export class PolicyEditorComponent implements OnInit, OnDestroy {
 
   async ngOnInit() {
     await this.updateJsonText(this.template, this.currentFormat);
+  }
+
+  get filteredTemplates(): TemplateCatalogEntry[] {
+    return this.templateCatalog.filter(this.templateEntries, this.templateSearch);
+  }
+
+  get permissionCount(): number {
+    return this.template.policy.permissions.length;
+  }
+
+  get obligationCount(): number {
+    return this.template.policy.obligations.length;
+  }
+
+  get prohibitionCount(): number {
+    return this.template.policy.prohibitions.length;
+  }
+
+  get constraintCount(): number {
+    const rules = [
+      ...this.template.policy.permissions,
+      ...this.template.policy.obligations,
+      ...this.template.policy.prohibitions,
+    ];
+    return rules.reduce((sum, rule) => sum + rule.constraints.length, 0);
   }
 
   updateLegalTextKinds(type: Action) {
@@ -117,40 +152,81 @@ export class PolicyEditorComponent implements OnInit, OnDestroy {
     );
   }
 
+  private blankFor(type: Action): PolicyConfiguration {
+    return type === Action.Use ? PolicyTemplates.UsageTemplate() : PolicyTemplates.AccessTemplate();
+  }
+
+  private refreshTemplateCatalog(): void {
+    this.templateEntries = this.templateCatalog.listFor(this.policyType);
+  }
+
   private async switchPolicyType(type: Action): Promise<void> {
     this.policyType = type;
-    if (type === Action.Use) {
-      this.template = PolicyTemplates.UsageTemplate();
-    } else {
-      this.template = PolicyTemplates.AccessTemplate();
-    }
+    this.selectedPolicyType = type;
+    this.template = this.blankFor(type);
     this.updateLegalTextKinds(type);
+    this.refreshTemplateCatalog();
     await this.updateJsonText(this.template, this.currentFormat);
   }
 
-  cancelTypeChange(): void {
+  private async applyTemplate(entry: TemplateCatalogEntry): Promise<void> {
+    this.template = entry.create();
+    this.policyType = this.template.policy.type;
     this.selectedPolicyType = this.policyType;
-    this.templateWarning = false;
+    this.updateLegalTextKinds(this.policyType);
+    this.refreshTemplateCatalog();
+    this.closeTemplateDrawer();
+    await this.updateJsonText(this.template, this.currentFormat);
   }
 
-  async acceptTypeChange(): Promise<void> {
-    await this.switchPolicyType(this.selectedPolicyType);
+  cancelPendingChange(): void {
+    this.selectedPolicyType = this.policyType;
     this.templateWarning = false;
+    this.pendingChange = undefined;
+  }
+
+  async acceptPendingChange(): Promise<void> {
+    if (!this.pendingChange) {
+      return;
+    }
+    if (this.pendingChange.kind === 'type') {
+      await this.switchPolicyType(this.pendingChange.type);
+    } else {
+      await this.applyTemplate(this.pendingChange.entry);
+    }
+    this.templateWarning = false;
+    this.pendingChange = undefined;
   }
 
   async onTypeChange() {
-    if (this.selectedPolicyType !== this.policyType) {
-      if (
-        this.isSamePolicy(
-          this.template,
-          this.policyType === Action.Use ? PolicyTemplates.UsageTemplate() : PolicyTemplates.AccessTemplate(),
-        )
-      ) {
-        await this.switchPolicyType(this.selectedPolicyType);
-      } else {
-        this.templateWarning = true;
-      }
+    if (this.selectedPolicyType === this.policyType) {
+      return;
     }
+    if (this.isSamePolicy(this.template, this.blankFor(this.policyType))) {
+      await this.switchPolicyType(this.selectedPolicyType);
+    } else {
+      this.pendingChange = { kind: 'type', type: this.selectedPolicyType };
+      this.templateWarning = true;
+    }
+  }
+
+  openTemplateDrawer(): void {
+    this.templateSearch = '';
+    this.refreshTemplateCatalog();
+    this.templateDrawerOpen = true;
+  }
+
+  closeTemplateDrawer(): void {
+    this.templateDrawerOpen = false;
+  }
+
+  async selectTemplate(entry: TemplateCatalogEntry): Promise<void> {
+    if (this.isSamePolicy(this.template, this.blankFor(this.policyType))) {
+      await this.applyTemplate(entry);
+      return;
+    }
+    this.pendingChange = { kind: 'template', entry };
+    this.templateWarning = true;
   }
 
   async onConfigSelectionChange(cfg: PolicyConfiguration) {

@@ -26,20 +26,26 @@ SPDX-License-Identifier: Apache-2.0
           <span>All changes to your policy will be deleted!</span>
         </div>
         <div>
-          <button type="button" class="btn btn-sm btn-outline hover:btn-error" (click)="acceptTypeChange()">
+          <button type="button" class="btn btn-sm btn-outline hover:btn-error" (click)="acceptPendingChange()">
             Accept
           </button>
-          <button type="button" class="btn btn-sm ml-3" (click)="cancelTypeChange()">Cancel</button>
+          <button type="button" class="btn btn-sm ml-3" (click)="cancelPendingChange()">Cancel</button>
         </div>
       </div>
     } @else {
-      <label class="select w-full">
-        <span class="label">Select Policy Type</span>
-        <select class="select w-full" [(ngModel)]="selectedPolicyType" (ngModelChange)="onTypeChange()">
-          <option [value]="Action.Access">Access Policy</option>
-          <option [value]="Action.Use">Usage Policy</option>
-        </select>
-      </label>
+      <div class="flex w-full flex-wrap items-end gap-3">
+        <label class="select w-full max-w-md flex-1">
+          <span class="label">Select Policy Type</span>
+          <select [(ngModel)]="selectedPolicyType" (ngModelChange)="onTypeChange()">
+            <option [value]="Action.Access">Access Policy</option>
+            <option [value]="Action.Use">Usage Policy</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn-soft btn-primary" (click)="openTemplateDrawer()">
+          <span class="material-symbols-rounded">dashboard_customize</span>
+          Start from template
+        </button>
+      </div>
     }
   </div>
 
@@ -192,3 +198,70 @@ SPDX-License-Identifier: Apache-2.0
     }
   </div>
 </div>
+
+@if (templateDrawerOpen) {
+  <div class="fixed inset-0 z-40 flex justify-end">
+    <button
+      type="button"
+      class="absolute inset-0 bg-base-content/30"
+      aria-label="Close templates"
+      (click)="closeTemplateDrawer()"
+    ></button>
+    <aside
+      class="relative z-10 flex h-full w-full max-w-md flex-col bg-base-100 shadow-2xl"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Policy templates"
+    >
+      <div class="flex items-start justify-between gap-3 border-b border-base-content/10 px-4 py-3">
+        <div>
+          <p class="font-semibold">Templates</p>
+          <p class="text-sm opacity-60">{{ policyType === Action.Access ? 'Access' : 'Usage' }} starters</p>
+        </div>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm btn-square"
+          aria-label="Close"
+          (click)="closeTemplateDrawer()"
+        >
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+      <div class="border-b border-base-content/10 px-4 py-3">
+        <label class="input input-sm w-full">
+          <span class="material-symbols-rounded !text-base opacity-50" aria-hidden="true">search</span>
+          <input
+            type="search"
+            placeholder="Search templates…"
+            [(ngModel)]="templateSearch"
+            aria-label="Search templates"
+          />
+        </label>
+      </div>
+      <ul class="menu min-h-0 flex-1 flex-nowrap gap-1 overflow-y-auto px-2 py-2">
+        @for (entry of filteredTemplates; track entry.id) {
+          <li>
+            <button type="button" class="rounded-lg" (click)="selectTemplate(entry)">
+              <div class="flex w-full flex-col items-start gap-1 py-1">
+                <span class="font-medium">{{ entry.name }}</span>
+                <span
+                  class="badge badge-sm"
+                  [class.badge-ghost]="entry.isBlank"
+                  [class.badge-primary]="entry.kind === 'Permission' && !entry.isBlank"
+                  [class.badge-secondary]="entry.kind === 'Obligation'"
+                  [class.badge-warning]="entry.kind === 'Prohibition'"
+                >
+                  {{ entry.kind }}
+                </span>
+              </div>
+            </button>
+          </li>
+        } @empty {
+          <li class="disabled px-3 py-6 text-center">
+            <span class="opacity-60">No templates match your search.</span>
+          </li>
+        }
+      </ul>
+    </aside>
+  </div>
+}
