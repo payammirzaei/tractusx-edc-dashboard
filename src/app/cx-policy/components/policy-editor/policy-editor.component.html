@@ -35,7 +35,7 @@ SPDX-License-Identifier: Apache-2.0
     } @else {
       <label class="select w-full">
         <span class="label">Select Policy Type</span>
-        <select class="select w-full" [(ngModel)]="selectedPolicyType" (ngModelChange)="onTypeChange()">
+        <select [(ngModel)]="selectedPolicyType" (ngModelChange)="onTypeChange()">
           <option [value]="Action.Access">Access Policy</option>
           <option [value]="Action.Use">Usage Policy</option>
         </select>
