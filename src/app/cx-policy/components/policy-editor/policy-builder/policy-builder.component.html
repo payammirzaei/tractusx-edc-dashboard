@@ -17,88 +17,112 @@ under the License.
 SPDX-License-Identifier: Apache-2.0
 -->
 
-<div class="w-full h-full grid grid-cols-[auto_1fr] gap-4 pb-4">
-  <ul class="menu bg-base-100 rounded-2xl pr-3">
+<div class="grid h-full w-full grid-cols-1 gap-3 pb-1 lg:grid-cols-[13.5rem_1fr]">
+  <ul class="menu rounded-2xl border border-base-content/10 bg-base-100/80 p-2 backdrop-blur-sm">
     <li>
-      <h2 class="menu-title flex justify-between pr-0">
-        <span>Permission(s)</span>
+      <h2 class="menu-title flex items-center justify-between px-2 pr-0">
+        <span class="cx-kicker !normal-case !tracking-wide">Permissions</span>
         <button
+          type="button"
           class="btn btn-primary btn-outline btn-xs btn-soft ml-2"
           (click)="addRule('Permission')"
           title="Add permission"
         >
-          <span class="material-symbols-rounded !text-[1.2rem]">add</span>
+          <span class="material-symbols-rounded !text-[1.15rem]">add</span>
         </button>
       </h2>
-      <ul>
+      <ul class="gap-1">
         @for (permission of policyConfig.policy.permissions; track permission.name) {
-          <div class="group flex flex-row justify-between flex-nowrap items-center">
-            <li class="w-40 mr-2" (click)="onRuleSelectionChange(permission, 'Permission')">
-              <a [class.text-primary]="permission === currentPermission">{{ permission.name }}</a>
+          <div class="group flex flex-row flex-nowrap items-center justify-between">
+            <li class="mr-1 min-w-0 flex-1" (click)="onRuleSelectionChange(permission, 'Permission')">
+              <a
+                class="cx-rule-item truncate"
+                [class.is-active]="permission === currentPermission"
+                [class.text-primary]="permission === currentPermission"
+              >
+                {{ permission.name }}
+              </a>
             </li>
             <button
+              type="button"
               class="btn btn-error btn-outline btn-xs btn-soft invisible group-hover:visible"
               (click)="removeRule(permission, 'Permission')"
               title="Delete permission"
             >
-              <span class="material-symbols-rounded !text-[1.2rem]">delete</span>
+              <span class="material-symbols-rounded !text-[1.1rem]">delete</span>
             </button>
           </div>
         }
       </ul>
     </li>
     @if (policyConfig.policy.type === Action.Use) {
-      <li>
-        <h2 class="menu-title flex justify-between pr-0">
-          <span>Obligation(s)</span>
+      <li class="mt-2">
+        <h2 class="menu-title flex items-center justify-between px-2 pr-0">
+          <span class="cx-kicker !normal-case !tracking-wide">Obligations</span>
           <button
+            type="button"
             class="btn btn-primary btn-outline btn-xs btn-soft ml-2"
             (click)="addRule('Obligation')"
-            title="Add permission"
+            title="Add obligation"
           >
-            <span class="material-symbols-rounded !text-[1.2rem]">add</span>
+            <span class="material-symbols-rounded !text-[1.15rem]">add</span>
           </button>
         </h2>
-        <ul>
+        <ul class="gap-1">
           @for (obligation of policyConfig.policy.obligations; track obligation.name) {
-            <div class="group flex flex-row justify-between flex-nowrap items-center">
-              <li class="w-40 mr-2" (click)="onRuleSelectionChange(obligation, 'Obligation')">
-                <a [class.text-primary]="obligation === currentPermission">{{ obligation.name }}</a>
+            <div class="group flex flex-row flex-nowrap items-center justify-between">
+              <li class="mr-1 min-w-0 flex-1" (click)="onRuleSelectionChange(obligation, 'Obligation')">
+                <a
+                  class="cx-rule-item truncate"
+                  [class.is-active]="obligation === currentPermission"
+                  [class.text-primary]="obligation === currentPermission"
+                >
+                  {{ obligation.name }}
+                </a>
               </li>
               <button
+                type="button"
                 class="btn btn-error btn-outline btn-xs btn-soft invisible group-hover:visible"
                 (click)="removeRule(obligation, 'Obligation')"
-                title="Delete permission"
+                title="Delete obligation"
               >
-                <span class="material-symbols-rounded !text-[1.2rem]">delete</span>
+                <span class="material-symbols-rounded !text-[1.1rem]">delete</span>
               </button>
             </div>
           }
         </ul>
       </li>
-      <li>
-        <h2 class="menu-title flex justify-between pr-0">
-          <span>Prohibition(s)</span>
+      <li class="mt-2">
+        <h2 class="menu-title flex items-center justify-between px-2 pr-0">
+          <span class="cx-kicker !normal-case !tracking-wide">Prohibitions</span>
           <button
+            type="button"
             class="btn btn-primary btn-outline btn-xs btn-soft ml-2"
             (click)="addRule('Prohibition')"
-            title="Add permission"
+            title="Add prohibition"
           >
-            <span class="material-symbols-rounded !text-[1.2rem]">add</span>
+            <span class="material-symbols-rounded !text-[1.15rem]">add</span>
           </button>
         </h2>
-        <ul>
+        <ul class="gap-1">
           @for (prohibition of policyConfig.policy.prohibitions; track prohibition.name) {
-            <div class="group flex flex-row justify-between flex-nowrap items-center">
-              <li class="w-40 mr-2" (click)="onRuleSelectionChange(prohibition, 'Prohibition')">
-                <a [class.text-primary]="prohibition === currentPermission">{{ prohibition.name }}</a>
+            <div class="group flex flex-row flex-nowrap items-center justify-between">
+              <li class="mr-1 min-w-0 flex-1" (click)="onRuleSelectionChange(prohibition, 'Prohibition')">
+                <a
+                  class="cx-rule-item truncate"
+                  [class.is-active]="prohibition === currentPermission"
+                  [class.text-primary]="prohibition === currentPermission"
+                >
+                  {{ prohibition.name }}
+                </a>
               </li>
               <button
+                type="button"
                 class="btn btn-error btn-outline btn-xs btn-soft invisible group-hover:visible"
                 (click)="removeRule(prohibition, 'Prohibition')"
-                title="Delete permission"
+                title="Delete prohibition"
               >
-                <span class="material-symbols-rounded !text-[1.2rem]">delete</span>
+                <span class="material-symbols-rounded !text-[1.1rem]">delete</span>
               </button>
             </div>
           }
@@ -112,6 +136,6 @@ SPDX-License-Identifier: Apache-2.0
     (permissionChange)="onRuleChange()"
     [permission]="currentPermission"
     [constraints]="constraintTemplates"
-    class="max-w-full"
+    class="min-w-0 max-w-full"
   ></app-permission>
 </div>

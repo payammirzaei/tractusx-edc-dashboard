@@ -17,93 +17,144 @@ under the License.
 SPDX-License-Identifier: Apache-2.0
 -->
 
-<div class="flex flex-col bg-base-100 rounded-2xl p-4 h-full">
-  <div class="w-full flex">
-    <label class="input flex-1">
-      <span class="label">Name</span>
-      <input type="text" placeholder="Permission name" [(ngModel)]="permission.name" />
+<div class="flex h-full flex-col rounded-2xl border border-base-content/10 bg-base-100/85 p-4 backdrop-blur-sm">
+  <div class="flex w-full flex-wrap items-end gap-3">
+    <label class="input input-sm min-w-0 flex-1">
+      <span class="label text-xs">Rule name</span>
+      <input type="text" placeholder="e.g. Usage Base" [(ngModel)]="permission.name" />
     </label>
-    <div class="dropdown dropdown-end ml-4">
-      <button tabindex="0" class="btn btn-soft btn-primary" title="Add constraint">
-        <span class="material-symbols-rounded">add</span>
-        Add Constraint
-      </button>
-      <ul
-        tabindex="0"
-        class="dropdown-content menu shadow-2xl bg-base-300 rounded-2xl flex-nowrap overflow-y-auto max-h-[50vh]"
-      >
-        @for (constraint of constraints; track constraint) {
-          <li (click)="addConstraint(constraint.clone())">
-            <a class="truncate">{{ camelCaseToWords(constraint.leftOperand) }}</a>
-          </li>
-        }
-      </ul>
-    </div>
+    <button type="button" class="btn btn-sm btn-primary" title="Add constraint" (click)="openConstraintDrawer()">
+      <span class="material-symbols-rounded !text-[1.15rem]">add</span>
+      Add Constraint
+    </button>
   </div>
 
-  <div class="divider m-0 my-4"><span class="opacity-80">Constraints</span></div>
+  <div class="my-4 flex items-center gap-3">
+    <div class="h-px flex-1 bg-base-content/10"></div>
+    <span class="cx-kicker">Constraints</span>
+    <div class="h-px flex-1 bg-base-content/10"></div>
+  </div>
 
-  <div class="flex flex-col gap-3 mx-4 [&>div]:last:border-none">
+  <div class="flex flex-col gap-2.5">
     @for (constraint of permission.constraints; track constraint) {
-      <div class="w-full flex flex-wrap items-center gap-4 border-b-2 border-b-base-content/10 pb-3">
-        <div class="flex flex-col flex-1">
-          <div class="text-xs font-normal opacity-60">Atomic Constraint</div>
-          <!--          <div class="text-xs font-normal opacity-60">-->
-          <!--            {{ constraint.constructor.name.slice(1).replace('Con', ' Con') }}-->
-          <!--          </div>-->
-          <div class="text-md font-normal">{{ constraint.toString().replace('Constraint ', '') }}</div>
+      <div class="cx-constraint-row">
+        <div class="flex min-w-0 flex-1 flex-col">
+          <div class="cx-kicker !tracking-[0.12em]">Atomic</div>
+          <div class="mt-0.5 text-sm font-medium leading-snug">
+            {{ constraint.toString().replace('Constraint ', '') }}
+          </div>
         </div>
         @if (getConstraintType(constraint) === 'atomic') {
-          <button class="btn btn-sm btn-square btn-soft btn-secondary" (click)="editConstraint(constraint)">
-            <span class="material-symbols-rounded !text-[1.2rem]">edit</span>
+          <button
+            type="button"
+            class="btn btn-sm btn-square btn-soft btn-secondary"
+            title="Edit constraint"
+            (click)="editConstraint(constraint)"
+          >
+            <span class="material-symbols-rounded !text-[1.15rem]">edit</span>
           </button>
         } @else {
-          <div class="dropdown dropdown-end ml-4">
-            <button tabindex="0" class="btn btn-soft btn-square btn-sm btn-primary" title="Add constraint">
-              <span class="material-symbols-rounded">add</span>
-            </button>
-            <ul
-              tabindex="0"
-              class="dropdown-content menu shadow-2xl bg-base-300 rounded-2xl flex-nowrap overflow-y-auto"
-            >
-              @for (atomic of constraints; track atomic) {
-                <li (click)="addConstraint(atomic.clone(), constraint)">
-                  <a class="truncate">{{ atomic.leftOperand }}</a>
-                </li>
-              }
-            </ul>
-          </div>
+          <button
+            type="button"
+            class="btn btn-sm btn-square btn-soft btn-primary"
+            title="Add nested constraint"
+            (click)="openConstraintDrawer(constraint)"
+          >
+            <span class="material-symbols-rounded">add</span>
+          </button>
         }
-        <button class="btn btn-sm btn-square btn-soft btn-error" (click)="deleteConstraint(constraint)">
-          <span class="material-symbols-rounded !text-[1.2rem]">delete</span>
+        <button
+          type="button"
+          class="btn btn-sm btn-square btn-soft btn-error"
+          title="Delete constraint"
+          (click)="deleteConstraint(constraint)"
+        >
+          <span class="material-symbols-rounded !text-[1.15rem]">delete</span>
         </button>
         @if (getConstraintType(constraint) === 'logical') {
-          <div class="w-full border-l-base-content/10 border-l-1 ml-2 -mt-3">
+          <div class="ml-1 w-full border-l border-base-content/10 pl-3">
             @for (subconstraint of getSubConstraints(constraint); track subconstraint) {
-              <div class="w-full px-4 flex gap-4 items-center my-2">
-                <div class="flex flex-col flex-1">
-                  <div class="text-xs font-normal opacity-60">
+              <div class="my-2 flex w-full items-center gap-3">
+                <div class="flex min-w-0 flex-1 flex-col">
+                  <div class="text-xs opacity-55">
                     {{ subconstraint.constructor.name.slice(1).replace('Con', ' Con') }}
                   </div>
-                  <div class="text-md font-normal">{{ subconstraint.toString().replace('Constraint ', '') }}</div>
+                  <div class="text-sm">{{ subconstraint.toString().replace('Constraint ', '') }}</div>
                 </div>
                 <button
+                  type="button"
                   class="btn btn-sm btn-square btn-soft btn-secondary"
+                  title="Edit constraint"
                   (click)="editConstraint(subconstraint, false, constraint)"
                 >
-                  <span class="material-symbols-rounded !text-[1.2rem]">edit</span>
+                  <span class="material-symbols-rounded !text-[1.15rem]">edit</span>
                 </button>
                 <button
+                  type="button"
                   class="btn btn-sm btn-square btn-soft btn-error"
+                  title="Delete constraint"
                   (click)="deleteConstraint(subconstraint, constraint)"
                 >
-                  <span class="material-symbols-rounded !text-[1.2rem]">delete</span>
+                  <span class="material-symbols-rounded !text-[1.15rem]">delete</span>
                 </button>
               </div>
             }
           </div>
         }
       </div>
+    } @empty {
+      <div class="cx-empty">
+        <span class="material-symbols-rounded !text-3xl opacity-35">hub</span>
+        <p class="font-medium text-base-content/70">No constraints yet</p>
+        <p class="text-xs">Open the catalog and search Catena-X constraints.</p>
+      </div>
     }
   </div>
 </div>
+
+@if (constraintDrawerOpen) {
+  <div class="fixed inset-0 z-40 flex justify-end">
+    <button
+      type="button"
+      class="cx-glass-backdrop absolute inset-0 cursor-default"
+      aria-label="Close constraint picker"
+      (click)="closeConstraintDrawer()"
+    ></button>
+    <aside class="cx-drawer-panel relative z-10" role="dialog" aria-label="Constraint catalog">
+      <div class="cx-drawer-header">
+        <div>
+          <p class="cx-kicker">Catalog</p>
+          <p class="cx-title mt-1">Add constraint</p>
+          <p class="cx-muted mt-1">Search by left operand, then configure in the editor.</p>
+        </div>
+        <button
+          type="button"
+          class="btn btn-ghost btn-sm btn-square"
+          aria-label="Close"
+          (click)="closeConstraintDrawer()"
+        >
+          <span class="material-symbols-rounded">close</span>
+        </button>
+      </div>
+      <div class="border-b border-base-content/10 px-4 py-3">
+        <label class="input input-sm w-full">
+          <span class="material-symbols-rounded !text-base opacity-50">search</span>
+          <input type="search" placeholder="Search constraints…" [(ngModel)]="constraintSearch" />
+        </label>
+      </div>
+      <div class="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+        @for (constraint of filteredConstraints; track constraint) {
+          <button type="button" class="cx-card" (click)="pickConstraint(constraint)">
+            <span class="font-semibold">{{ camelCaseToWords(constraint.leftOperand) }}</span>
+            <span class="cx-muted font-mono text-[0.7rem]">{{ constraint.leftOperand }}</span>
+          </button>
+        } @empty {
+          <div class="cx-empty">
+            <span class="material-symbols-rounded !text-3xl opacity-40">search_off</span>
+            <span>No constraints match your search.</span>
+          </div>
+        }
+      </div>
+    </aside>
+  </div>
+}

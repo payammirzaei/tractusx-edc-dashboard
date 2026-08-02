@@ -19,7 +19,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Component, EventEmitter, Input, Output } from '@angular/core';
+import { Component, EventEmitter, Input, Output, inject } from '@angular/core';
 import {
   AtomicConstraint,
   camelCaseToWords,
@@ -47,11 +47,44 @@ export class PermissionComponent {
 
   @Input() constraints: AtomicConstraint[] = [];
 
-  constructor(
-    policyService: PolicyService,
-    readonly modalService: ModalAndAlertService,
-  ) {
-    this.actions = policyService.actions();
+  constraintDrawerOpen = false;
+  constraintSearch = '';
+  private drawerParent: Constraint | undefined;
+
+  readonly modalService = inject(ModalAndAlertService);
+  private readonly policyService = inject(PolicyService);
+
+  constructor() {
+    this.actions = this.policyService.actions();
+  }
+
+  get filteredConstraints(): AtomicConstraint[] {
+    const q = this.constraintSearch.trim().toLowerCase();
+    if (!q) {
+      return this.constraints;
+    }
+    return this.constraints.filter(c => {
+      const label = camelCaseToWords(c.leftOperand).toLowerCase();
+      return label.includes(q) || c.leftOperand.toLowerCase().includes(q);
+    });
+  }
+
+  openConstraintDrawer(parent: Constraint | undefined = undefined): void {
+    this.drawerParent = parent;
+    this.constraintSearch = '';
+    this.constraintDrawerOpen = true;
+  }
+
+  closeConstraintDrawer(): void {
+    this.constraintDrawerOpen = false;
+    this.drawerParent = undefined;
+    this.constraintSearch = '';
+  }
+
+  pickConstraint(constraint: AtomicConstraint): void {
+    const parent = this.drawerParent;
+    this.closeConstraintDrawer();
+    this.addConstraint(constraint.clone(), parent);
   }
 
   getConstraintType(constraint: Constraint): 'atomic' | 'logical' {
@@ -105,17 +138,6 @@ export class PermissionComponent {
       );
     } else if (constraint instanceof LogicalConstraint) {
       onResult(constraint);
-      /*this.modalService.openModal(
-        LogicalConstraintDialogComponent,
-        {
-          constraint: constraint,
-          constraints: this.constraints.filter(c => !c.multiple),
-        },
-        {
-          canceled: () => this.modalService.closeModal(),
-          save: onResult,
-        },
-      )*/
     }
   }
 
